@@ -191,16 +191,16 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
         $this->_init('webshopapps_matrixrate', 'pk');
     }
 
-	/**
-	 * Return table rate array or false by rate request
+    /**
+     * Return table rate array or false by rate request
+     *
+     * @param \Magento\Quote\Model\Quote\Address\RateRequest $request
+     * @param bool $zipRangeSet
 	 *
-	 * @param \Magento\Quote\Model\Quote\Address\RateRequest $request
-	 * @param bool                                           $zipRangeSet
-	 *
-	 * @return array|bool
+     * @return array|bool
 	 * @throws \Magento\Framework\Exception\LocalizedException
 	 * @throws \Zend_Db_Select_Exception
-	 */
+     */
     public function getRate(\Magento\Quote\Model\Quote\Address\RateRequest $request, $zipRangeSet = false)
     {
         $adapter = $this->getConnection();
@@ -319,16 +319,16 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
         return $shippingData;
     }
 
-	/**
-	 * Upload table rate file and import data from it
-	 *
+    /**
+     * Upload table rate file and import data from it
+     *
 	 * @param \Magento\Framework\DataObject $object
 	 *
 	 * @return \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\Matrixrate
-	 * @throws \Magento\Framework\Exception\LocalizedException
-	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-	 * @SuppressWarnings(PHPMD.NPathComplexity)
-	 */
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     public function uploadAndImport(\Magento\Framework\DataObject $object)
     {
         //M2-24
@@ -595,6 +595,26 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $shippingMethod = $row[8];
         }
 
+
+        // validate startDate
+        $startDate = '';
+        if (!empty($row[9])) {
+            $startDate = $row[9];
+        }
+
+        // validate startDate
+        $endDate = '';
+        if (!empty($row[10])) {
+            $endDate = $row[10];
+        }
+
+        // validate startDate
+        $methodCode = '';
+        if (!empty($row[11])) {
+            $methodCode = $row[11];
+        }
+
+
         // protect from duplicate
         $hash = sprintf(
             "%s-%s-%s-%s-%F-%F-%s",
@@ -604,7 +624,8 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $zipCode,
             $valueFrom,
             $valueTo,
-            $shippingMethod
+            $shippingMethod,
+            $methodCode
         );
         if (isset($this->importUniqueHash[$hash])) {
             $this->importErrors[] = __(
@@ -617,7 +638,8 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
                 $zip_to,
                 $valueFrom,
                 $valueTo,
-                $shippingMethod
+                $shippingMethod,
+                $methodCode
             );
             return false;
         }
@@ -634,18 +656,21 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $valueFrom,                 // condition_value From
             $valueTo,                   // condition_value To
             $price,                     // price
-            $shippingMethod
+            $shippingMethod,
+            $startDate,
+            $endDate,
+            $methodCode
         ];
     }
 
-	/**
-	 * Save import data batch
+    /**
+     * Save import data batch
+     *
+     * @param array $data
 	 *
-	 * @param array $data
-	 *
-	 * @return \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\Matrixrate
+     * @return \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\Matrixrate
 	 * @throws \Magento\Framework\Exception\LocalizedException
-	 */
+     */
     protected function _saveImportData(array $data)
     {
         if (!empty($data)) {

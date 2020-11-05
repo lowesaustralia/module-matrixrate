@@ -1,0 +1,27 @@
+{
+    "webshopapps_matrixrate": {
+        "column": {
+            "pk": true,
+            "website_id": true,
+            "dest_country_id": true,
+            "dest_region_id": true,
+            "dest_city": true,
+            "dest_zip": true,
+            "dest_zip_to": true,
+            "condition_name": true,
+            "condition_from_value": true,
+            "condition_to_value": true,
+            "price": true,
+            "cost": true,
+            "shipping_method": true,
+            "start_date": true,
+            "end_date": true,
+            "method_code": true,
+            "update_time": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "UNQ_1F88ACC89F513C4E6FE1FEEAD343B921": true
+        }
+    }
+}
