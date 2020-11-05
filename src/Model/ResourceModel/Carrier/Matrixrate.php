@@ -686,6 +686,9 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
                 'condition_to_value',
                 'price',
                 'shipping_method',
+                'start_date',
+                'end_date',
+                'method_code'
             ];
             $this->getConnection()->insertArray($this->getMainTable(), $columns, $data);
             $this->importedRows += count($data);
