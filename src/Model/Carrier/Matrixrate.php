@@ -327,7 +327,8 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
 
             $currentDate = $this->date->gmtTimestamp($this->timezoneInterface->date()->format('Y-m-d H:i:s'));
 
-            if (!empty($rate['start_date'])) {
+            // magento inserts default as '0000-00-00 00:00:00' so easiest would be string check
+            if (isset($rate['start_date']) && $rate['start_date'] !== '0000-00-00 00:00:00') {
                 $startDate = $this->date->gmtTimestamp($rate['start_date']);
 
                 if ($currentDate < $startDate) {
@@ -335,7 +336,8 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
                 }
             }
 
-            if (!empty($rate['end_date'])) {
+            // magento inserts default as '0000-00-00 00:00:00' so easiest would be string check
+            if (isset($rate['end_date']) && $rate['end_date'] !== '0000-00-00 00:00:00') {
                 $endDate = $this->date->gmtTimestamp($rate['end_date']);
 
                 if ($currentDate > $endDate) {

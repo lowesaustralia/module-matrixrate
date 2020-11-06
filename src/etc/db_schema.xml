@@ -21,8 +21,8 @@
         <column xsi:type="decimal" name="price" scale="4" precision="12" unsigned="false" nullable="false" default="0.0000" comment="Price"/>
         <column xsi:type="decimal" name="cost" scale="4" precision="12" unsigned="false" nullable="false" default="0.0000" comment="Cost"/>
         <column xsi:type="varchar" name="shipping_method" nullable="false" length="255" comment="Shipping Method"/>
-        <column xsi:type="datetime" name="start_date" on_update="false" nullable="true" comment="Active From"/>
-        <column xsi:type="datetime" name="end_date" on_update="false" nullable="true" comment="Active Until"/>
+        <column xsi:type="datetime" name="start_date" on_update="false" nullable="true" default="0" comment="Active From"/>
+        <column xsi:type="datetime" name="end_date" on_update="false" nullable="true" default="0" comment="Active Until"/>
         <column xsi:type="varchar" name="method_code" nullable="false" length="100" default="" comment="Method Code"/>
         <column xsi:type="timestamp" name="update_time" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Update Time Auto"/>
 
