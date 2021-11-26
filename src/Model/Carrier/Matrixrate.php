@@ -130,6 +130,20 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
             return false;
         }
 
+        /* @var $item \Magento\Quote\Model\Quote\Item\Interceptor */
+        foreach ($request->getAllItems() as $item) {
+            $address = $item->getQuote()->getShippingAddress();
+
+            if ($address && $address->getBaseSubtotalTotalInclTax()) {
+                $baseSubtotalInclTax = $address->getBaseSubtotalTotalInclTax();
+                $discountAmount = abs($address->getBaseDiscountAmount());
+                $subtotal = $baseSubtotalInclTax - $discountAmount;
+
+                $request->setLowesCustomSubtotalAfterDiscount($subtotal);
+                break;
+            }
+        }
+
         // exclude Virtual products price from Package value if pre-configured
         if (!$this->getConfigFlag('include_virtual_price') && $request->getAllItems()) {
             foreach ($request->getAllItems() as $item) {
