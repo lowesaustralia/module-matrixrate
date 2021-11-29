@@ -305,6 +305,8 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $this->logger->debug('SQL Select: ', $select->getPart('where'));
             $this->logger->debug('Bindings: ', $bind);
 
+            // $query = $select->bind($bind)->__toString();
+
             $results = $adapter->fetchAll($select, $bind);
 
             if (!empty($results)) {
