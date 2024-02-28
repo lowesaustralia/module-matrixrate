@@ -195,20 +195,27 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
      * Return table rate array or false by rate request
      *
      * @param \Magento\Quote\Model\Quote\Address\RateRequest $request
-     * @param bool $zipRangeSet
-	 *
+     * @param bool                                           $zipRangeSet
+     *
      * @return array|bool
-	 * @throws \Magento\Framework\Exception\LocalizedException
-	 * @throws \Zend_Db_Select_Exception
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws \Zend_Db_Select_Exception
      */
     public function getRate(\Magento\Quote\Model\Quote\Address\RateRequest $request, $zipRangeSet = false)
     {
         $adapter = $this->getConnection();
         $shippingData=[];
-        $postcode = trim((string)$request->getDestPostcode()); //SHQ18-1978
+
+        $postcode = trim((string)$request->getDestPostcode() ?? ""); //SHQ18-1978
+
+        if ($request->getDestCountryId() == 'BR') {
+            #  Brazil can have a hyphen, let's remove it
+            $postcode = trim(str_replace("-","", $postcode));
+        }
+
         if ($zipRangeSet && is_numeric($postcode)) {
-			#  Want to search for postcodes within a range. SHQ18-98 Can't use bind. Will convert int to string
-			$zipSearchString = ' AND ' .(int)$postcode. ' BETWEEN dest_zip AND dest_zip_to ';
+            #  Want to search for postcodes within a range. SHQ18-98 Can't use bind. Will convert int to string
+            $zipSearchString = ' AND ' . (int)$postcode . ' BETWEEN dest_zip AND dest_zip_to ';
         } else {
             $zipSearchString = " AND :postcode LIKE dest_zip ";
         }
@@ -226,7 +233,7 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $bind=[];
             switch ($j) {
                 case 0: // country, region, city, postcode
-                    $zoneWhere =  "dest_country_id = :country_id AND dest_region_id = :region_id AND STRCMP(LOWER(dest_city),LOWER(:city))= 0 " .$zipSearchString;
+                    $zoneWhere =  "dest_country_id = :country_id AND dest_region_id = :region_id AND STRCMP(LOWER(dest_city),LOWER(:city))= 0 " . $zipSearchString;
                     $bind = [
                         ':country_id' => $request->getDestCountryId(),
                         ':region_id' => (int)$request->getDestRegionId(),
@@ -236,7 +243,7 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
                     break;
                 case 1: // country, region, no city, postcode
                     $zoneWhere =  "dest_country_id = :country_id AND dest_region_id = :region_id AND dest_city='*' "
-                        .$zipSearchString;
+                        . $zipSearchString;
                     $bind = [
                         ':country_id' => $request->getDestCountryId(),
                         ':region_id' => (int)$request->getDestRegionId(),
@@ -260,7 +267,7 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
                     break;
                 case 4: // country, postcode
                     $zoneWhere =  "dest_country_id = :country_id AND dest_region_id = '0' AND dest_city ='*' "
-                        .$zipSearchString;
+                        . $zipSearchString;
                     $bind = [
                         ':country_id' => $request->getDestCountryId(),
                         ':postcode' => $postcode,
@@ -305,8 +312,6 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $this->logger->debug('SQL Select: ', $select->getPart('where'));
             $this->logger->debug('Bindings: ', $bind);
 
-            // $query = $select->bind($bind)->__toString();
-
             $results = $adapter->fetchAll($select, $bind);
 
             if (!empty($results)) {
@@ -324,9 +329,9 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
     /**
      * Upload table rate file and import data from it
      *
-	 * @param \Magento\Framework\DataObject $object
-	 *
-	 * @return \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\Matrixrate
+     * @param \Magento\Framework\DataObject $object
+     *
+     * @return \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\Matrixrate
      * @throws \Magento\Framework\Exception\LocalizedException
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.NPathComplexity)
@@ -348,7 +353,7 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
         $this->importedRows = 0;
 
         //M2-20
-        $tmpDirectory = ini_get('upload_tmp_dir')? $this->readFactory->create(ini_get('upload_tmp_dir'))
+        $tmpDirectory = ini_get('upload_tmp_dir') ? $this->readFactory->create(ini_get('upload_tmp_dir'))
             : $this->filesystem->getDirectoryRead(DirectoryList::SYS_TMP);
         $path = $tmpDirectory->getRelativePath($csvFile);
         $stream = $tmpDirectory->openFile($path);
@@ -509,7 +514,7 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
 
         // strip whitespace from the beginning and end of each row
         foreach ($row as $k => $v) {
-            $row[$k] = trim($v);
+            $row[$k] = trim($v ?? "");
         }
 
         // validate country
@@ -557,7 +562,7 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
 
         // validate condition from value
         // MNB-472 Thanks to https://github.com/JeroenVanLeusden for the enhancement to accept -1
-        $valueFrom = $row[5] == '*' || $row[5] == -1 ? -1 : $this->_parseDecimalValue($row[5]);
+        $valueFrom = $row[5] == '*' || $row[5] <= 0 ? -1 : $this->_parseDecimalValue($row[5]);
         if ($valueFrom === false) {
             $this->importErrors[] = __(
                 'Please correct %1 From "%2" in Row #%3.',
@@ -567,8 +572,8 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             );
             return false;
         }
-        // validate conditionto to value
-        $valueTo = $row[6] == '*' ? 10000000 :$this->_parseDecimalValue($row[6]);
+        // validate condition to value
+        $valueTo = $row[6] == '*' ? 10000000 : $this->_parseDecimalValue($row[6]);
         if ($valueTo === false) {
             $this->importErrors[] = __(
                 'Please correct %1 To "%2" in Row #%3.',
@@ -666,9 +671,9 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
      * Save import data batch
      *
      * @param array $data
-	 *
+     *
      * @return \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\Matrixrate
-	 * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function _saveImportData(array $data)
     {
