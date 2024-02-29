@@ -1,3 +1,4 @@
+
 {
     "webshopapps_matrixrate": {
         "column": {
@@ -13,7 +14,11 @@
             "condition_to_value": true,
             "price": true,
             "cost": true,
-            "shipping_method": true
+            "shipping_method": true,
+            "start_date": true,
+            "end_date": true,
+            "method_code": true,
+            "update_time": true
         },
         "constraint": {
             "PRIMARY": true,

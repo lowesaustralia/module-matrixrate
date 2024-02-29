@@ -599,6 +599,22 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
         }
 
         // protect from duplicate
+        $startDate = '';
+        if (!empty($row[9])) {
+            $startDate = $row[9];
+        }
+
+        // validate startDate
+        $endDate = '';
+        if (!empty($row[10])) {
+            $endDate = $row[10];
+        }
+
+        // validate startDate
+        $methodCode = '';
+        if (!empty($row[11])) {
+            $methodCode = $row[11];
+        }
         $hash = sprintf(
             "%s-%s-%s-%s-%F-%F-%s",
             $countryId,
@@ -607,7 +623,8 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $zipCode,
             $valueFrom,
             $valueTo,
-            $shippingMethod
+            $shippingMethod,
+            $methodCode
         );
         if (isset($this->importUniqueHash[$hash])) {
             $this->importErrors[] = __(
@@ -620,7 +637,8 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
                 $zip_to,
                 $valueFrom,
                 $valueTo,
-                $shippingMethod
+                $shippingMethod,
+                $methodCode
             );
             return false;
         }
@@ -637,7 +655,10 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
             $valueFrom,                 // condition_value From
             $valueTo,                   // condition_value To
             $price,                     // price
-            $shippingMethod
+            $shippingMethod,
+            $startDate,
+            $endDate,
+            $methodCode
         ];
     }
 
@@ -664,6 +685,9 @@ class Matrixrate extends \Magento\Framework\Model\ResourceModel\Db\AbstractDb
                 'condition_to_value',
                 'price',
                 'shipping_method',
+                'start_date',
+                'end_date',
+                'method_code'
             ];
             $this->getConnection()->insertArray($this->getMainTable(), $columns, $data);
             $this->importedRows += count($data);

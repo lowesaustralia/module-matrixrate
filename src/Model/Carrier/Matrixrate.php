@@ -73,6 +73,14 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
      * @var \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\MatrixrateFactory
      */
     protected $matrixrateFactory;
+    /**
+     * @var \Magento\Framework\Stdlib\DateTime\DateTime
+     */
+    private $date;
+    /**
+     * @var \Magento\Framework\Stdlib\DateTime\TimezoneInterface
+     */
+    private $timezoneInterface;
 
     /**
      * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
@@ -81,7 +89,10 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
      * @param \Magento\Shipping\Model\Rate\ResultFactory $rateResultFactory
      * @param \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $resultMethodFactory
      * @param \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\MatrixrateFactory $matrixrateFactory
+     * @param \Magento\Framework\Stdlib\DateTime\DateTime $date
+     * @param \Magento\Framework\Stdlib\DateTime\TimezoneInterface $timezoneInterface
      * @param array $data
+     * @throws LocalizedException
      * @SuppressWarnings(PHPMD.UnusedLocalVariable)
      */
     public function __construct(
@@ -91,11 +102,15 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
         \Magento\Shipping\Model\Rate\ResultFactory $rateResultFactory,
         \Magento\Quote\Model\Quote\Address\RateResult\MethodFactory $resultMethodFactory,
         \WebShopApps\MatrixRate\Model\ResourceModel\Carrier\MatrixrateFactory $matrixrateFactory,
+        \Magento\Framework\Stdlib\DateTime\DateTime $date,
+        \Magento\Framework\Stdlib\DateTime\TimezoneInterface $timezoneInterface,
         array $data = []
     ) {
         $this->rateResultFactory = $rateResultFactory;
         $this->resultMethodFactory = $resultMethodFactory;
         $this->matrixrateFactory = $matrixrateFactory;
+        $this->date = $date;
+        $this->timezoneInterface = $timezoneInterface;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
         foreach ($this->getCode('condition_name') as $k => $v) {
             $this->conditionNames[] = $k;
@@ -113,6 +128,20 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
     {
         if (!$this->getConfigFlag('active')) {
             return false;
+        }
+
+        /* @var $item \Magento\Quote\Model\Quote\Item\Interceptor */
+        foreach ($request->getAllItems() as $item) {
+            $address = $item->getQuote()->getShippingAddress();
+
+            if ($address && $address->getBaseSubtotalTotalInclTax()) {
+                $baseSubtotalInclTax = $address->getBaseSubtotalTotalInclTax();
+                $discountAmount = abs($address->getBaseDiscountAmount());
+                $subtotal = $baseSubtotalInclTax - $discountAmount;
+
+                $request->setLowesCustomSubtotalAfterDiscount($subtotal);
+                break;
+            }
         }
 
         // exclude Virtual products price from Package value if pre-configured
@@ -183,13 +212,21 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
 
         foreach ($rateArray as $rate) {
             if (!empty($rate) && $rate['price'] >= 0) {
+
+                if (!$this->validateDate($rate)) {
+                    continue;
+                }
+
                 /** @var \Magento\Quote\Model\Quote\Address\RateResult\Method $method */
                 $method = $this->resultMethodFactory->create();
 
                 $method->setCarrier('matrixrate');
                 $method->setCarrierTitle($this->getConfigData('title'));
 
-                $method->setMethod('matrixrate_' . $rate['pk']);
+                $rateCode = empty($rate['method_code']) ? $rate['pk'] : $rate['method_code'];
+                $rateCode = strtolower($rateCode);
+
+                $method->setMethod($rateCode);
                 $method->setMethodTitle(__($rate['shipping_method']));
 
                 if ($request->getFreeShipping() === true || $request->getPackageQty() == $freeQty) {
@@ -269,11 +306,13 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
             'condition_name' => [
                 'package_weight' => __('Weight vs. Destination'),
                 'package_value' => __('Order Subtotal vs. Destination'),
+                'package_value_with_discount' => __('Order Subtotal (after discount) vs. Destination'),
                 'package_qty' => __('# of Items vs. Destination')
             ],
             'condition_name_short' => [
                 'package_weight' => __('Weight'),
                 'package_value' => __('Order Subtotal'),
+                'package_value_with_discount' => __('Order Subtotal (after discount)'),
                 'package_qty' => __('# of Items')
             ]
         ];
@@ -287,5 +326,45 @@ class Matrixrate extends \Magento\Shipping\Model\Carrier\AbstractCarrier impleme
     public function getAllowedMethods()
     {
         return ['matrixrate' => $this->getConfigData('name')];
+    }
+
+    /**
+     * @param $rate
+     * @return bool
+     */
+    public function validateDate($rate)
+    {
+        $valid = true;
+
+        try {
+            if (empty($rate['start_date']) && empty($rate['end_date'])) {
+                return $valid;
+            }
+
+            $currentDate = $this->date->gmtTimestamp($this->timezoneInterface->date()->format('Y-m-d H:i:s'));
+
+            // magento inserts default as '0000-00-00 00:00:00' so easiest would be string check
+            if (isset($rate['start_date']) && $rate['start_date'] !== '0000-00-00 00:00:00') {
+                $startDate = $this->date->gmtTimestamp($rate['start_date']);
+
+                if ($currentDate < $startDate) {
+                    $valid = false;
+                }
+            }
+
+            // magento inserts default as '0000-00-00 00:00:00' so easiest would be string check
+            if (isset($rate['end_date']) && $rate['end_date'] !== '0000-00-00 00:00:00') {
+                $endDate = $this->date->gmtTimestamp($rate['end_date']);
+
+                if ($currentDate > $endDate) {
+                    $valid = false;
+                }
+            }
+
+        } catch (\Exception $exception) {
+            $valid = false;
+        }
+
+        return $valid;
     }
 }
