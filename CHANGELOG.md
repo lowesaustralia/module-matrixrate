@@ -88,3 +88,19 @@ SHQ23-1431 Update readme
 SHQ23-1381 Remove table on module uninstall
 
 
+## 20.4.7 (2025-01-07)
+SHQ23-4085 Update readme
+
+
+## 20.4.9 (2025-01-31)
+INFRA-893 Added missing mp release step
+
+
+## 20.5.0 (2025-05-07)
+SHQ23-4872 PHP8.4 and Magento 2.4.8 compatibility
+
+
+## 20.5.1 (2025-08-27)
+SHQ23-4872 PHP8.4 and Magento 2.4.8 compatibility
+
+
